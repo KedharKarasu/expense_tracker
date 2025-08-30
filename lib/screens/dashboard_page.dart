@@ -1,9 +1,10 @@
-// ignore_for_file: avoid_print
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:auto_size_text/auto_size_text.dart';
+
 import '../bloc/transaction_bloc.dart';
 import '../models/transaction.dart';
 import 'add_expense_screen.dart';
@@ -27,8 +28,15 @@ class _DashboardPageState extends State<DashboardPage> {
       SystemUiMode.manual,
       overlays: [SystemUiOverlay.bottom],
     );
-
     // Load transactions when dashboard opens
+    context.read<TransactionBloc>().add(LoadTransactions());
+  }
+
+  // ✅ FIXED: Refresh dashboard when returning from other screens
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload transactions whenever the dashboard becomes visible
     context.read<TransactionBloc>().add(LoadTransactions());
   }
 
@@ -39,23 +47,47 @@ class _DashboardPageState extends State<DashboardPage> {
         builder: (context) => const TransactionPage(),
       ),
     ).then((_) {
-      if (!mounted) return;
-      context.read<TransactionBloc>().add(LoadTransactions());
+      // ✅ FIXED: Reload transactions when returning from transaction page
+      if (mounted) {
+        context.read<TransactionBloc>().add(LoadTransactions());
+      }
     });
   }
 
-  // Add method to handle tab selection
+  // ✅ FIXED: Navigate to add screens with proper refresh
+  void _navigateToAddExpense() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AddExpenseScreen()),
+    ).then((_) {
+      // Refresh dashboard when returning from add expense
+      if (mounted) {
+        context.read<TransactionBloc>().add(LoadTransactions());
+      }
+    });
+  }
+
+  void _navigateToAddIncome() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AddIncomeScreen()),
+    ).then((_) {
+      // Refresh dashboard when returning from add income
+      if (mounted) {
+        context.read<TransactionBloc>().add(LoadTransactions());
+      }
+    });
+  }
+
   void _selectPeriod(String period) {
     setState(() {
       _selectedPeriod = period;
     });
-    // Add logic here to filter transactions by period if needed
   }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF),
       body: SingleChildScrollView(
@@ -120,6 +152,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                 size: 20,
                               ),
                             ),
+
                             // Month Dropdown
                             Container(
                               width: 107,
@@ -148,6 +181,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                 ],
                               ),
                             ),
+
                             // Notification Icon
                             SizedBox(
                               width: 32,
@@ -165,6 +199,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           ],
                         ),
                       ),
+
                       // Account Balance
                       Padding(
                         padding: const EdgeInsets.only(top: 20),
@@ -182,23 +217,29 @@ class _DashboardPageState extends State<DashboardPage> {
                             BlocBuilder<TransactionBloc, TransactionState>(
                               builder: (context, state) {
                                 if (state is TransactionLoaded) {
-                                  return Text(
+                                  return AutoSizeText(
                                     '₹${state.balance.toStringAsFixed(0)}',
                                     style: GoogleFonts.inter(
                                       fontSize: 40,
                                       fontWeight: FontWeight.w600,
                                       color: const Color(0xFF161719),
                                     ),
+                                    maxLines: 1,
+                                    minFontSize: 24,
+                                    maxFontSize: 40,
                                     textAlign: TextAlign.center,
                                   );
                                 }
-                                return Text(
-                                  '₹9400',
+                                return AutoSizeText(
+                                  '₹0',
                                   style: GoogleFonts.inter(
                                     fontSize: 40,
                                     fontWeight: FontWeight.w600,
                                     color: const Color(0xFF161719),
                                   ),
+                                  maxLines: 1,
+                                  minFontSize: 24,
+                                  maxFontSize: 40,
                                   textAlign: TextAlign.center,
                                 );
                               },
@@ -206,6 +247,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           ],
                         ),
                       ),
+
                       // Income and Expense Cards
                       Padding(
                         padding: const EdgeInsets.only(top: 20),
@@ -215,7 +257,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             Expanded(
                               child: BlocBuilder<TransactionBloc, TransactionState>(
                                 builder: (context, state) {
-                                  double income = 5000;
+                                  double income = 0;
                                   if (state is TransactionLoaded) {
                                     income = state.totalIncome;
                                   }
@@ -233,7 +275,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             Expanded(
                               child: BlocBuilder<TransactionBloc, TransactionState>(
                                 builder: (context, state) {
-                                  double expense = 1200;
+                                  double expense = 0;
                                   if (state is TransactionLoaded) {
                                     expense = state.totalExpense;
                                   }
@@ -254,7 +296,8 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ),
             ),
-            // Graph Section
+
+            // Graph Section (placeholder)
             SizedBox(
               width: screenWidth,
               height: 185.5,
@@ -295,6 +338,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ],
               ),
             ),
+
             // Tabs
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 14),
@@ -313,22 +357,10 @@ class _DashboardPageState extends State<DashboardPage> {
                 ],
               ),
             ),
+
             const SizedBox(height: 20),
-            // Yesterday Header
-            Container(
-              width: screenWidth,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: const Color(0xFFFFFFFF),
-              child: Text(
-                'Yesterday',
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF0D0E0F),
-                ),
-              ),
-            ),
-            // Spend Frequency Header
+
+            // Spend Frequency Header with floating action button
             Container(
               width: screenWidth,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -337,7 +369,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Spend Frequency',
+                    'Recent Transactions',
                     style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -365,7 +397,8 @@ class _DashboardPageState extends State<DashboardPage> {
                 ],
               ),
             ),
-            // Transactions List
+
+            // ✅ FIXED: Recent transactions list (all types, not just expenses)
             BlocBuilder<TransactionBloc, TransactionState>(
               builder: (context, state) {
                 if (state is TransactionLoading) {
@@ -378,7 +411,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                   );
                 } else if (state is TransactionLoaded) {
-                  return _buildTransactionsList(state);
+                  return _buildRecentTransactionsList(state);
                 } else if (state is TransactionError) {
                   return _buildErrorState(state.message);
                 } else {
@@ -386,6 +419,60 @@ class _DashboardPageState extends State<DashboardPage> {
                 }
               },
             ),
+
+            // Quick Add Buttons
+            Container(
+              width: screenWidth,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _navigateToAddExpense,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFD3C4A),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      icon: const Icon(Icons.remove, size: 20),
+                      label: Text(
+                        'Add Expense',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _navigateToAddIncome,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00A86B),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      icon: const Icon(Icons.add, size: 20),
+                      label: Text(
+                        'Add Income',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 100), // Space for bottom navigation
           ],
         ),
@@ -432,16 +519,17 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      '₹${amount.toStringAsFixed(0)}',
-                      style: GoogleFonts.inter(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFFFCFCFC),
-                      ),
+                  AutoSizeText(
+                    '₹${amount.toStringAsFixed(0)}',
+                    style: GoogleFonts.inter(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFFFCFCFC),
                     ),
+                    maxLines: 1,
+                    minFontSize: 14,
+                    maxFontSize: 22,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -477,20 +565,33 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildTransactionsList(TransactionLoaded state) {
+  // ✅ FIXED: Show recent transactions (all types) matching transaction page
+  Widget _buildRecentTransactionsList(TransactionLoaded state) {
     if (state.transactions.isEmpty) {
       return _buildEmptyTransactions();
     }
 
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 19),
-      itemCount: state.transactions.take(3).length,
-      itemBuilder: (context, index) {
-        final transaction = state.transactions[index];
-        return _buildTransactionItem(transaction);
-      },
+    // Sort all transactions by date (newest first) and take recent 5
+    final recentTransactions = state.transactions
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+    
+    final displayTransactions = recentTransactions.take(5).toList();
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 19),
+          itemCount: displayTransactions.length,
+          itemBuilder: (context, index) {
+            final transaction = displayTransactions[index];
+            return _buildTransactionItem(transaction);
+          },
+        ),
+      ],
     );
   }
 
@@ -511,19 +612,33 @@ class _DashboardPageState extends State<DashboardPage> {
         break;
       case 'subscription':
       case 'recurring bill':
+      case 'bills':
         categoryIcon = Icons.receipt;
         backgroundColor = const Color(0xFFEEE5FF);
         iconColor = const Color(0xFF7F3DFF);
         break;
       case 'food':
+      case 'restaurant':
         categoryIcon = Icons.restaurant;
         backgroundColor = const Color(0xFFFDD5D7);
         iconColor = const Color(0xFFFD3C4A);
         break;
+      case 'salary':
+      case 'income':
+        categoryIcon = Icons.work;
+        backgroundColor = const Color(0xFFCFFAEA);
+        iconColor = const Color(0xFF00A86B);
+        break;
+      case 'transportation':
+      case 'transport':
+        categoryIcon = Icons.directions_car;
+        backgroundColor = const Color(0xFFBDDCFF);
+        iconColor = const Color(0xFF0077FF);
+        break;
       default:
-        categoryIcon = Icons.category;
-        backgroundColor = const Color(0xFFFCFCFC);
-        iconColor = isIncome ? const Color(0xFF00A86B) : const Color(0xFFFD3C4A);
+        categoryIcon = isIncome ? Icons.trending_up : Icons.category;
+        backgroundColor = isIncome ? const Color(0xFFCFFAEA) : const Color(0xFFFCEED4);
+        iconColor = isIncome ? const Color(0xFF00A86B) : const Color(0xFFFCAC12);
     }
 
     return Container(
@@ -551,11 +666,12 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ),
             const SizedBox(width: 12),
+            
             // Transaction Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     transaction.category,
@@ -580,21 +696,23 @@ class _DashboardPageState extends State<DashboardPage> {
                 ],
               ),
             ),
+            
             // Amount and Time
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    '- ₹${transaction.amount.toStringAsFixed(0)}',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFFFD3C4A),
-                    ),
+                AutoSizeText(
+                  '${isIncome ? '+' : '-'} ₹${transaction.amount.toStringAsFixed(0)}',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isIncome ? const Color(0xFF00A86B) : const Color(0xFFFD3C4A),
                   ),
+                  maxLines: 1,
+                  minFontSize: 12,
+                  maxFontSize: 16,
+                  textAlign: TextAlign.right,
                 ),
                 const SizedBox(height: 4),
                 Text(

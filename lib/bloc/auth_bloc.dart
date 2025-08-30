@@ -8,14 +8,12 @@ class SignUpRequested extends AuthEvent {
   final String name;
   final String email;
   final String password;
-  
   SignUpRequested({required this.name, required this.email, required this.password});
 }
 
 class SignInRequested extends AuthEvent {
   final String email;
   final String password;
-  
   SignInRequested({required this.email, required this.password});
 }
 
@@ -25,7 +23,6 @@ class AuthStatusChecked extends AuthEvent {}
 
 class PasswordResetRequested extends AuthEvent {
   final String email;
-  
   PasswordResetRequested({required this.email});
 }
 
@@ -38,13 +35,11 @@ class AuthLoading extends AuthState {}
 
 class AuthSuccess extends AuthState {
   final User user;
-  
   AuthSuccess({required this.user});
 }
 
 class AuthFailure extends AuthState {
   final String message;
-  
   AuthFailure({required this.message});
 }
 
@@ -71,10 +66,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         email: event.email,
         password: event.password,
       );
-      
       await userCredential.user?.updateDisplayName(event.name);
       await userCredential.user?.sendEmailVerification();
-      
       emit(AuthSuccess(user: userCredential.user!));
     } catch (e) {
       emit(AuthFailure(message: _getFirebaseErrorMessage(e)));
@@ -88,7 +81,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         email: event.email,
         password: event.password,
       );
-      
       emit(AuthSuccess(user: userCredential.user!));
     } catch (e) {
       emit(AuthFailure(message: _getFirebaseErrorMessage(e)));
@@ -97,6 +89,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onSignOutRequested(SignOutRequested event, Emitter<AuthState> emit) async {
     try {
+      // ✅ Properly sign out from Firebase
       await _firebaseAuth.signOut();
       emit(AuthSignedOut());
     } catch (e) {

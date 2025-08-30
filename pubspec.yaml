@@ -20,6 +20,7 @@ dependencies:
   shared_preferences: ^2.2.2  # ✅ Stable version
   google_fonts: ^6.1.0
   email_validator: ^2.1.17
+  auto_size_text: ^3.0.0
 
 
 dev_dependencies:
